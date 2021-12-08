@@ -46,7 +46,7 @@ char *get_zone(FILE *file, t_zone *zone)
 	char	*tmp;
 	int		i;
 
-	if (fscanf(file,"%d %d %c", &zone->width, &zone->height, &zone->backgroud) != 3)
+	if (fscanf(file,"%d %d %c\n", &zone->width, &zone->height, &zone->backgroud) != 3)
 		return (NULL);
 	if (zone->height > 300 || zone->height <= 0 || zone->width <= 0 || zone->width > 300)
 		return (NULL);
@@ -59,14 +59,14 @@ char *get_zone(FILE *file, t_zone *zone)
 	return (tmp);
 }
 
-int	in_circle(int x, int y, t_shape *shape)
+int	in_circle(float x, float y, t_shape *shape)
 {
 	float	dist;
 
 	dist = sqrtf(powf(x - shape->x, 2.) + powf(y - shape->y, 2.));
-	if (shape->radius >= dist)
+	if (dist <= shape->radius)
 	{
-		if (shape->radius - dist < 1.00000000)
+		if ((shape->radius - dist) < 1.00000000)
 			return (2);
 		return (1);
 	}
@@ -85,7 +85,7 @@ void	draw_shape(t_zone *zone, t_shape *shape, char *drawing)
 		x = 0;
 		while (x < zone->width)
 		{
-			is_it = in_circle(x, y, shape);
+			is_it = in_circle((float)x, (float)y, shape);
 			if ((shape->type == 'c' && is_it == 2) || (shape->type == 'C' && is_it))
 				drawing[(y * zone->width) + x] = shape->color;
 			x++;
@@ -99,15 +99,15 @@ int	draw_shapes(FILE *file, t_zone *zone, char *drawing)
 	t_shape	shape;
 	int		ret;
 
-	while (ret = (fscanf(file, "%c %f %f %f %c", &shape.type, &shape.x, &shape.y, &shape.radius, &shape.color) == 5))
+	while ((ret = fscanf(file, "%c %f %f %f %c\n", &shape.type, &shape.x, &shape.y, &shape.radius, &shape.color)) == 5)
 	{
 		if (shape.radius <= 0.000000 || (shape.type != 'c' && shape.type != 'C'))
-			return (-1);
+			return (0);
 		draw_shape(zone, &shape, drawing);
 	}
-	if (ret != 0)
-		return (-1);
-	return (0);
+	if (ret != -1)
+		return (0);
+	return (1);
 }
 
 void	draw_drawing(char *drawing, t_zone *zone)
@@ -128,10 +128,10 @@ int	ft_erreur(char *str)
 {
 	if (str)
 		write(1, str, ft_strlen(str));
-	return (-1);
+	return (1);
 }
 
-void	ft_clean(FILE *file, char *drawing, char *str)
+int	ft_clean(FILE *file, char *drawing, char *str)
 {
 	if (file)
 		fclose(file);
@@ -139,6 +139,7 @@ void	ft_clean(FILE *file, char *drawing, char *str)
 		free(drawing);
 	if (str)
 		ft_erreur(str);
+		return (1);
 }
 
 int	main(int ac, char **av)
@@ -156,15 +157,10 @@ int	main(int ac, char **av)
 	if (!(file = fopen(av[1], "r")))
 		return (ft_erreur("ERREUR, les argument sont incorecte\n"));
 	if (!(drawing = get_zone(file, &zone)))
-	{
-		ft_clean(file, drawing, "ERREUR, les argument sont incorecte\n");
-		return (-1);
-	}
-	if (draw_shapes(file, &zone, drawing) == -1)
-	{
-		ft_clean(file, drawing, "ERREUR, le fichier est incorecte\n");
-		return (-1);
-	}
+		return (ft_clean(file, drawing, "ERREUR, les argument sont incorecte\n"));
+	if (!draw_shapes(file, &zone, drawing))
+		return (ft_clean(file, drawing, "ERREUR, le fichier est incorecte\n"));
 	draw_drawing(drawing, &zone);
+	ft_clean(file, drawing, NULL);
 	return (0);
 }
